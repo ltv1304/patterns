@@ -1,24 +1,45 @@
-from jinja2 import Environment, FileSystemLoader
+from Framework.http_lib import HttpResponse, HttpResponseRedirect
+from Framework.view import View
 
-from http_lib import HttpResponce
-
-
-def render(template_name, context):
-    file_loader = FileSystemLoader('template')
-    env = Environment(loader=file_loader)
-    template = env.get_template(template_name)
-    return template.render(context=context)
+context = {
+        'index': '/',
+        'about': '/about',
+        'contacts': '/contacts',
+    }
 
 
-def index_view(request):
-    if request.method == 'GET':
-        return HttpResponce(render('index.html', context={'about_url': '/about'}), request)
-    else:
-        return
+class IndexView(View):
+    def get(self, request):
+        return HttpResponse(self.render('index.html', context=context), request)
 
 
-def about_view(request):
-    if request.method == 'GET':
-        return HttpResponce(render('about.html', context={'index_url': '/'}), request)
-    else:
-        return
+class AboutView(View):
+
+    def get(self, request):
+        return HttpResponse(self.render('about.html', context=context), request)
+
+
+class ContactsView(View):
+
+    def get(self, request):
+        return HttpResponse(self.render('contacts.html', context=context), request)
+
+    def post(self, request):
+        if request.data_len:
+            message = request.data
+            print(message)
+            message_fields = message.split('&')
+            message_dict = {}
+            for field in message_fields:
+                key, val = field.split('=', 1)
+                message_dict[key]=val
+            print(f'Получено сообщение от пользователя: {message_dict["name"]}(e-mail: {message_dict["mail"]})')
+            print(f'Текс сообщения:')
+            print(message_dict["message"])
+        return HttpResponseRedirect('', request)
+
+
+class SuccessView(View):
+
+    def get(self, request):
+        return HttpResponse(self.render('success_page.html'), request)
