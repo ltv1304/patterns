@@ -1,12 +1,9 @@
-from pprint import pprint
-from http_lib import Request
+from Framework.http_lib import RequestWSGIServer
+from web_app import app
 
 
-def app(environ, start_response):
-    request = Request(environ)
-    pprint(environ)
-    print(request.method)
-    pprint(request.headers)
-    pprint(request.query)
-    start_response('200 OK', [('Content-Type', 'text/html')])
-    return [b'Hello from ... ']
+def wsgi_app(environ, start_response):
+    request = RequestWSGIServer(environ)
+    response = app(request)
+    start_response(response.response_status, list(response.response_headers.items()))
+    return [response.body.encode()]
