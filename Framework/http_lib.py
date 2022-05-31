@@ -122,30 +122,35 @@ class RequestTestServer(Request):
 
 
 class HttpResponse:
-    def __init__(self, responce_body, request):
+    def __init__(self, responce_body, request, additional_headers={}):
         self.request = request
         self.body = responce_body
-        self.response_headers = {
+        self.headers_raw = {
             'Content-Type': 'text/html; encoding=utf8',
             'Content-Length': str(len(self.body)),
             'Connection': 'close',
         }
-        self.response_headers_raw = ''.join(['{}: {}\n'.format(k, v) for k, v in self.response_headers.items()])
+        self.additional_headers = additional_headers
         self.response_proto = 'HTTP/1.1'
-        self.response_status = '200 OK'
+        self.response_status = '200 OK\n'
+
+    @property
+    def headers(self):
+        headers_full = {**self.headers_raw, **self.additional_headers}
+        return ''.join(['{}: {}\n'.format(k, v) for k, v in headers_full.items()])
 
 
 class HttpResponseRedirect:
     def __init__(self, response_body, request):
         self.request = request
         self.body = response_body
-        self.response_headers = {
+        self.headers_raw = {
             'Content-Type': 'text/html; encoding=utf8',
             'Content-Length': str(len(self.body)),
             'Connection': 'close',
             'Location': '/success'
         }
-        self.response_headers_raw = ''.join(['{}: {}\n'.format(k, v) for k, v in self.response_headers.items()])
+        self.headers = ''.join(['{}: {}\n'.format(k, v) for k, v in self.headers_raw.items()])
         self.response_proto = 'HTTP/1.1'
         self.response_status = '303'
         self.response_status_text = 'See Other'

@@ -1,8 +1,9 @@
 from Framework.http_lib import Request
-from urls import urls, front_controller
+from Framework.middleware import middleware, CORS
+from urls import front_controller
 
 
+@middleware(CORS, {'http://localhost:63342': ['GET']})
 def app(request: Request):
-    front_controller.create_tree(urls)
     controller = front_controller.get_controller(request.path)
     return controller(request)

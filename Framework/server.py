@@ -42,7 +42,7 @@ class TestServer:
             http_responce = app(request)
 
             client_socket.send(f'{http_responce.response_proto} {http_responce.response_status}'.encode())
-            client_socket.send(http_responce.response_headers_raw.encode())
+            client_socket.send(http_responce.headers.encode())
             client_socket.send('\n'.encode())  # to separate headers from body
             client_socket.send(http_responce.body.encode())
             self.to_monitor.remove(client_socket)
