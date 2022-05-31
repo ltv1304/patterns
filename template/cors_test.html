@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>cors_test</title>
+</head>
+<body>
+    <script>
+        fetch(
+            'http://localhost:8001',
+            {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+            }
+        ).then(resp => console.log(resp.text()))
+    </script>
+</body>
+</html>

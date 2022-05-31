@@ -9,3 +9,5 @@ success = UrlNode('success', SuccessView(), front_controller.root)
 
 urls = [about, contacts, success]
 
+front_controller.create_tree(urls)
+
