@@ -143,7 +143,7 @@ class HttpResponse:
 class HttpResponseRedirect:
     def __init__(self, response_body, request):
         self.request = request
-        self.body = response_body
+        self.body = response_body.encode("utf-8")
         self.headers_raw = {
             'Content-Type': 'text/html; encoding=utf8',
             'Content-Length': str(len(self.body)),

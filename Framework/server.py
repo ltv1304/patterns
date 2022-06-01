@@ -44,7 +44,7 @@ class TestServer:
             client_socket.send(f'{http_responce.response_proto} {http_responce.response_status}'.encode())
             client_socket.send(http_responce.headers.encode())
             client_socket.send('\n'.encode())  # to separate headers from body
-            client_socket.send(http_responce.body.encode())
+            client_socket.send(http_responce.body)
             self.to_monitor.remove(client_socket)
             client_socket.close()
         else:
