@@ -20,4 +20,4 @@ class View:
         file_loader = FileSystemLoader('template')
         env = Environment(loader=file_loader)
         template = env.get_template(template_name)
-        return template.render(context=context)
+        return template.render(context=context).encode("utf-8")
