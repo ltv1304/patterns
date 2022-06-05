@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Contacts{% endblock %}
+{% block content %}
+{% include 'nav_panel.html' %}
+<h1>Contacts with us</h1>
+<form action="" method="post">
+    <input type="text" id="name" name="name" placeholder="Input your name"/>
+    <br><input type="email" id="main" name="mail" placeholder="Input your e-mail"/>
+    <br><textarea id="message" name="message" placeholder="Ask about somethink"></textarea>
+    <br><button type="submit">Send</button>
+</form>
+{% endblock %}

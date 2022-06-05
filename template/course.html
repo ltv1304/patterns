@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Contacts{% endblock %}
+{% block content %}
+{% include 'nav_panel.html' %}
+<h1>Страница курсов</h1>
+<h2>Список курсов</h2>
+<ul id="cours_list">
+    {% for item in context['courses'] %}
+        <li>{{ item.name }}</li>
+    {% endfor %}
+    </ul>
+<h2>Создать курс</h2>
+<form action="" method="post">
+    <input type="text" id="name" name="name" placeholder="Ведите название курса"/>
+    <br><select name="category" id="category">
+    <option value="">--Выбирете категорию курса--</option>
+    {% for item in context['categories'] %}
+        <option value="{{ item.id }}">{{ item.name }}</option>
+    {% endfor %}
+
+    </select>
+    <br><select name="type" id="type">
+    <option value="">--Выбирете тип курса--</option>
+    <option value="online">Online курс</option>
+    <option value="offline">Offline курс</option>
+    </select>
+    <br><textarea id="detail" name="detail" placeholder="Введите подробности"></textarea>
+    <br><button type="submit">Send</button>
+</form>
+{% endblock %}
