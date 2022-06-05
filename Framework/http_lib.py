@@ -152,5 +152,5 @@ class HttpResponseRedirect:
         }
         self.headers = ''.join(['{}: {}\n'.format(k, v) for k, v in self.headers_raw.items()])
         self.response_proto = 'HTTP/1.1'
-        self.response_status = '303'
-        self.response_status_text = 'See Other'
+        self.response_status = '303 See Other\n'
+

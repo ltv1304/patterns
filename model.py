@@ -1,39 +1,74 @@
-from peewee import *
-
-db = SqliteDatabase('univer.db')
-
-
-class BaseModel(Model):
-    class Meta:
-        database = db
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 
-class Category(BaseModel):
-    id = PrimaryKeyField(null=False)
-    name = CharField()
+class AbstractFactory(ABC):
 
-    class Meta:
-        db_table = 'category'
-
-
-class Course(BaseModel):
-    id = PrimaryKeyField(null=False)
-    name = CharField(max_length=100, unique=True)
-    type = CharField(max_length=100)
-    detail = CharField(max_length=100)
-    category = ForeignKeyField(Category, related_name='category_details')
-
-    class Meta:
-        db_table = 'course'
+    @staticmethod
+    def get_data(data):
+        message_fields = data.split('&')
+        message_dict = {}
+        for field in message_fields:
+            key, val = field.split('=', 1)
+            message_dict[key] = val
+        return message_dict
 
 
-class Student(BaseModel):
-    id = PrimaryKeyField(null=False)
-    name = CharField(max_length=100, unique=True)
+class Category:
+    id = 0
+
+    def __init__(self, data):
+        self.id = Category.id
+        Category.id += 1
+        self.name = data['name']
 
 
-class StudentCourse(BaseModel):
-    student = ForeignKeyField(Student)
-    course = ForeignKeyField(Course)
+class CategoryFactory(AbstractFactory):
+    @classmethod
+    def crate(cls, data):
+        message_dict = cls.get_data(data)
+        return Category(message_dict)
 
+
+class OfflineCourseFactory:
+
+    @classmethod
+    def create(cls, id, data):
+        return cls.Course(id, **data)
+
+    @dataclass
+    class Course:
+        id: int
+        name: str
+        detail: str
+        category: str
+        type: str = 'offline'
+
+
+class OnlineCourseFactory(OfflineCourseFactory):
+
+    @dataclass
+    class Course:
+        id: int
+        name: str
+        detail: str
+        category: str
+        type: str = 'online'
+
+
+class Fabric(AbstractFactory):
+    ONLINE = 'online'
+    OFFLINE = 'offline'
+    id = 0
+
+    @classmethod
+    def create_course(cls, data):
+        message_dict = cls.get_data(data)
+
+        if message_dict['type'] == cls.ONLINE:
+            return OnlineCourseFactory.create(cls.id, message_dict)
+        elif message_dict['type'] == cls.OFFLINE:
+            return OfflineCourseFactory.create(cls.id, message_dict)
+
+        cls.id += 1
 

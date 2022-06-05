@@ -1,7 +1,7 @@
 from Framework.http_lib import HttpResponse, HttpResponseRedirect
+from Framework.middleware import debug
 from Framework.view import View
-from forms import CourseForm, CategoryForm
-from model import Course, Category
+from model import CategoryFactory, Fabric
 
 context = {
         'index': '/',
@@ -12,6 +12,7 @@ context = {
     }
 
 
+@debug('test')
 class IndexView(View):
     def get(self, request):
         return HttpResponse(self.render('index.html', context=context), request)
@@ -23,6 +24,7 @@ class AboutView(View):
         return HttpResponse(self.render('about.html', context=context), request)
 
 
+@debug('test1')
 class ContactsView(View):
 
     def get(self, request):
@@ -50,32 +52,30 @@ class SuccessView(View):
 
 
 class CourseView(View):
+    course_list = []
+
     def get(self, request):
-        courses = Course.select()
-        categories = Category.select()
-        context['courses'] = courses
-        context['categories'] = categories
-        for item in courses:
-            print(item.name)
+        context['courses'] = self.course_list
+        context['categories'] = CategoryView.category_list
         return HttpResponse(self.render('course.html', context=context), request)
 
     def post(self, request):
         if request.data_len:
-            course = CourseForm(request.data)
-            course.create()
+            course = Fabric.create_course(request.data)
+            self.course_list.append(course)
             return HttpResponseRedirect('', request)
 
 
 class CategoryView(View):
+    category_list = []
+
     def get(self, request):
-        categories = Category.select()
+        categories = self.category_list
         context['categories'] = categories
-        for item in categories:
-            print(item.name)
         return HttpResponse(self.render('category.html', context=context), request)
 
     def post(self, request):
         if request.data_len:
-            category = CategoryForm(request.data)
-            category.create()
+            category = CategoryFactory.crate(request.data)
+            self.category_list.append(category)
             return HttpResponseRedirect('', request)
