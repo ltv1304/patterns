@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Contacts{% endblock %}
+{% block content %}
+{% include 'nav_panel.html' %}
+<h1>Персональная cтраница студента {{context['student'].name}}</h1>
+<h2>Список действующих курсов студента:</h2>
+<ul id="students_list">
+    {% for item in context['student'].course_list %}
+        <li>{{ context['courses'][item].name }}</li>
+    {% endfor %}
+    </ul>
+<h2>Записать/исключить студента с курсов</h2>
+<form action="" method="post">
+    <select name="course" id="course", multiple>
+    <option value="">--Выбирете курсы для записи--</option>
+    {% for item in context['courses'] %}
+        {% if item.id in context['student'].course_list%}
+            <option value="{{ item.id }}" selected>{{ item.name }}</option>
+        {% else %}
+            <option value="{{ item.id }}">{{ item.name }}</option>
+        {% endif %}
+    {% endfor %}
+    </select>
+    <br><button type="submit">Send</button>
+</form>
+{% endblock %}

@@ -1,5 +1,4 @@
 import datetime
-import time
 
 from Framework.http_lib import HttpResponse
 from urllib.parse import urlparse

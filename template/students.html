@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Contacts{% endblock %}
+{% block content %}
+{% include 'nav_panel.html' %}
+<h1>Страница списка студентов</h1>
+<h2>Список студентов</h2>
+<ul id="students_list">
+    {% for item in context['students_list'] %}
+        <li><a href="{{context['students']}}?pk={{item.id}}"> {{ item.name }} </a></li>
+    {% endfor %}
+    </ul>
+<h2>Принять нового студента</h2>
+<form action="" method="post">
+    <input type="text" id="name" name="name" placeholder="Ведите имя студента"/>
+    <br><button type="submit">Send</button>
+</form>
+{% endblock %}
