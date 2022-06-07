@@ -6,7 +6,7 @@
 <h2>Список курсов</h2>
 <ul id="cours_list">
     {% for item in context['courses'] %}
-        <li>{{ item.name }}</li>
+    <li><a href="{{context['course']}}?pk={{item.id}}">{{ item.name }}</a></li>
     {% endfor %}
     </ul>
 <h2>Создать курс</h2>

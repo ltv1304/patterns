@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Contacts{% endblock %}
+{% block content %}
+{% include 'nav_panel.html' %}
+<h1>Страница курса {{context['course_detail'].name}}</h1>
+<h2>Изменить курс</h2>
+<form action="" method="post">
+    <input type="text" id="name" name="name" placeholder="Ведите название курса" value="{{context['course_detail'].name}}"/>
+    <br><select name="category" id="category">
+    {% for item in context['categories'] %}
+        {% if item.id == context['course_detail'].category%}
+            <option value="{{ item.id }}" selected>{{ item.name }}</option>
+        {% else %}
+            <option value="{{ item.id }}">{{ item.name }}</option>
+        {% endif %}
+    {% endfor %}
+    </select>
+    <br><select name="type" id="type">
+    {% if context['course_detail'].type == "online"%}
+        <option value="online" selected>Online курс</option>
+        <option value="offline">Offline курс</option>
+    {% else %}
+        <option value="online">Online курс</option>
+        <option value="offline" selected>Offline курс</option>
+    {% endif %}
+    </select>
+    <br><textarea id="detail" name="detail" placeholder="Введите подробности">{{context['course_detail'].detail}}</textarea>
+    <br><button type="submit">Change</button>
+</form>
+{% endblock %}

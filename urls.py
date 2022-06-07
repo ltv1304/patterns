@@ -1,5 +1,5 @@
 from Framework.url_dispatcher import UrlTree, UrlNode
-from views import AboutView, IndexView, ContactsView, SuccessView, CourseView, CategoryView
+from views import AboutView, IndexView, ContactsView, SuccessView, CourseView, CategoryView, StudentsView
 
 front_controller = UrlTree()
 front_controller.root.controller = IndexView()
@@ -8,8 +8,9 @@ contacts = UrlNode('contacts', ContactsView(), front_controller.root)
 success = UrlNode('success', SuccessView(), front_controller.root)
 course = UrlNode('course', CourseView(), front_controller.root)
 category = UrlNode('category', CategoryView(), front_controller.root)
+students = UrlNode('students', StudentsView(), front_controller.root)
 
-urls = [about, contacts, success, course, category]
+urls = [about, contacts, success, course, category, students]
 
 front_controller.create_tree(urls)
 
