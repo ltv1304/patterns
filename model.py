@@ -1,119 +1,220 @@
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import List
+import sqlite3
 
-from Framework.apps import Subject
-
-
-class AbstractFactory(ABC):
-
-    @staticmethod
-    def get_data(data):
-        message_fields = data.split('&')
-        message_dict = {}
-        for field in message_fields:
-            key, val = field.split('=', 1)
-            message_dict[key] = val
-        return message_dict
+from Framework.apps import Subject, EmailNotifier, SMSNotifier
+from Framework.exceptions import DbException, DbUpdateException
+from Framework.serializers import AbstractSerializer
 
 
-class Student:
-    id = 0
+class CategorySerializer(AbstractSerializer):
+    def __init__(self, *args):
+        super().__init__(*args)
 
-    def __init__(self, data):
-        self.id = Student.id
-        Student.id += 1
-        self.name = data['name']
-        self.course_list = []
+    def get_all(self):
+        try:
+            data = super(CategorySerializer, self).get_all()
+        except DbException:
+            data = []
+        return data
 
-    def manage_course(self, course):
-        self.course_list = course
-
-
-class StudentFactory(AbstractFactory):
-    @classmethod
-    def crate(cls, data):
-        message_dict = cls.get_data(data)
-        return Student(message_dict)
+    def data_cook(self, data: str):
+        data_dict = self.get_data(data)
+        data_dict['name'] = data_dict['name'].rstrip()
+        return data_dict
 
 
-class Category:
-    id = 0
+class CourseBaseSerializer(AbstractSerializer):
+    def __init__(self, *args):
+        super().__init__(*args)
 
-    def __init__(self, data):
-        self.id = Category.id
-        Category.id += 1
-        self.name = data['name']
-        self.course_list = []
+    def get_all(self):
+        try:
+            course_list = super(CourseBaseSerializer, self).get_all()
+        except DbException:
+            course_list = []
+        return course_list
 
-    def __getitem__(self, item):
-        return self.course_list[item]
-
-
-class CategoryFactory(AbstractFactory):
-    @classmethod
-    def crate(cls, data):
-        message_dict = cls.get_data(data)
-        return Category(message_dict)
-
-
-@dataclass
-class CourseRaw(Subject):
-    id: int
-    name: str
-    detail: str
-    category: int
-    student_list: List = field(default_factory=list)
-
-    def __post_init__(self):
-        super().__init__()
-
-    def __getitem__(self, item):
-        return self.student_list[item]
+    def data_cook(self, data: str):
+        data_dict = self.get_data(data)
+        data_dict['name'] = data_dict['name'].rstrip()
+        data_dict['detail'] = data_dict['detail'].rstrip()
+        data_dict['detail'] = int(data_dict['detail'])
+        return data_dict
 
 
-class OfflineCourseFactory:
-
-    @classmethod
-    def create(cls, id, data):
-        return cls.Course(id, **data)
-
-    @dataclass
-    class Course(CourseRaw):
-        type: str = 'offline'
+class CourseSerializer(AbstractSerializer, Subject):
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.many2many_table = 'course_student'
+        self.many2many_field = 'student'
+        self.student_serializer = StudentBaseSerializer(conn, 'student', 'Fabric', ('name',))
+        self.related_field = 'students_list'
 
 
-class OnlineCourseFactory(OfflineCourseFactory):
+    @property
+    def Class(self):
+        super_class = super(CourseSerializer, self).Class
+        related_field = self.related_field
 
-    @dataclass
-    class Course(CourseRaw):
-        type: str = 'online'
+        class _Class(super_class):
+            def __init__(self, **kwargs):
+                super().__init__(**kwargs)
+                self.__dict__[related_field] = []
 
+            def __getitem__(self, item):
+                return self.students_list[item]
 
-class Fabric(AbstractFactory):
-    ONLINE = 'online'
-    OFFLINE = 'offline'
-    id = 0
+            def __contains__(self, item):
+                for student in self.students_list:
+                    if student.id == item.id:
+                        return True
+                return False
 
-    @classmethod
-    def create_course(cls, data):
-        message_dict = cls.get_data(data)
-        message_dict['category'] = int(message_dict['category'])
-        if message_dict['type'] == cls.ONLINE:
-            course = OnlineCourseFactory.create(cls.id, message_dict)
-        elif message_dict['type'] == cls.OFFLINE:
-            course = OfflineCourseFactory.create(cls.id, message_dict)
+        return _Class
 
-        cls.id += 1
+    def get_all(self):
+        try:
+            course_list = super(CourseSerializer, self).get_all()
+        except DbException:
+            course_list = []
+        if course_list:
+            result = []
+            for course in course_list:
+                result.append(self.get_foreign_data(course,
+                                                    self.many2many_field,
+                                                    self.many2many_table,
+                                                    self.student_serializer,
+                                                    self.related_field))
+        return course_list
+
+    def find_by_id(self, pk: int):
+        course = super(CourseSerializer, self).find_by_id(pk)
+        if course:
+            course = self.get_foreign_data(course,
+                                            self.many2many_field,
+                                            self.many2many_table,
+                                            self.student_serializer,
+                                            self.related_field)
         return course
 
-    @classmethod
-    def change_course(cls, course, data):
-        message_dict = cls.get_data(data)
-        message_dict['category'] = int(message_dict['category'])
-        for key, val in message_dict.items():
-            course.__setattr__(key, val)
-        course._notify()
+    def data_cook(self, data: str):
+        data_dict = self.get_data(data)
+        data_dict['name'] = data_dict['name'].rstrip()
+        data_dict['detail'] = data_dict['detail'].rstrip()
+        data_dict['detail'] = int(data_dict['detail'])
+        return data_dict
+
+    def update(self, *args):
+        super(CourseSerializer, self).update(*args)
+        self._subject_state = self.find_by_id(args[1])
+        self._notify()
 
 
+class StudentBaseSerializer(AbstractSerializer):
+    def __init__(self, *args):
+        super().__init__(*args)
 
+    def get_all(self):
+        try:
+            student_list = super(StudentBaseSerializer, self).get_all()
+        except DbException:
+            student_list = []
+        return student_list
+
+    def data_cook(self, data: str):
+        data_dict = self.get_data(data)
+        data_dict['name'] = data_dict['name'].rstrip()
+        return data_dict
+
+
+class StudentSerializer(AbstractSerializer):
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.many2many_table = 'course_student'
+        self.course_serializer = CourseBaseSerializer(conn, 'course', 'Fabric', ('name',))
+        self.many2many_field = 'course'
+        self.related_field = 'course_list'
+
+    @property
+    def Class(self):
+        super_class = super(StudentSerializer, self).Class
+        related_field = self.related_field
+
+        class _Class(super_class):
+            def __init__(self, **kwargs):
+                super().__init__(**kwargs)
+                self.__dict__[related_field] = []
+
+            def __getitem__(self, item):
+                return self.course_list[item]
+
+            def __contains__(self, item):
+                for course in self.course_list:
+                    if course.id == item.id:
+                        return True
+                return False
+
+        return _Class
+
+    def update(self, data: str, pk: int):
+        course_id_list = self.course_data_cook(data)
+        statement = f"SELECT * FROM {self.many2many_table} WHERE student_id=?;"
+        self.cursor.execute(statement, (pk,))
+        query = self.cursor.fetchall()
+        if query:
+            statement = f"DELETE FROM {self.many2many_table} WHERE student_id=?;"
+            self.cursor.execute(statement, (pk,))
+
+        statement = f"INSERT INTO {self.many2many_table} (course_id, student_id) VALUES (?, ?);"
+        for course_id in course_id_list:
+            self.cursor.execute(statement, (course_id, pk))
+        try:
+            self.connection.commit()
+        except DbException as e:
+            raise DbUpdateException(e.args)
+
+    def get_all(self):
+        try:
+            student_list = super(StudentSerializer, self).get_all()
+        except DbException:
+            student_list = []
+        if student_list:
+            result = []
+            for student in student_list:
+                result.append(self.get_foreign_data(student,
+                                                    self.many2many_field,
+                                                    self.many2many_table,
+                                                    self.course_serializer,
+                                                    self.related_field))
+        return student_list
+
+    def find_by_id(self, pk: int):
+        student = super(StudentSerializer, self).find_by_id(pk)
+        if student:
+            student = self.get_foreign_data(student,
+                                            self.many2many_field,
+                                            self.many2many_table,
+                                            self.course_serializer,
+                                            self.related_field)
+        return student
+
+    def data_cook(self, data: str):
+        data_dict = self.get_data(data)
+        data_dict['name'] = data_dict['name'].rstrip()
+        return data_dict
+
+    @staticmethod
+    def course_data_cook(data: str):
+        message_fields = data.split('&')
+        course_list = []
+        for field in message_fields:
+            key, val = field.split('=', 1)
+            course_list.append(val)
+        return course_list
+
+
+conn = sqlite3.connect('test.db')
+category_serializer = CategorySerializer(conn, 'category', 'Category', ('name', ))
+course_serializer = CourseSerializer(conn, 'course', 'Fabric', ('name', 'detail', 'category', 'type'))
+course_serializer.attach(SMSNotifier())
+course_serializer.attach(EmailNotifier())
+student_serializer = StudentSerializer(conn, 'student', 'Student', ('name', ))

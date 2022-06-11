@@ -27,4 +27,11 @@
     <br><textarea id="detail" name="detail" placeholder="Введите подробности">{{context['course_detail'].detail}}</textarea>
     <br><button type="submit">Change</button>
 </form>
+
+<h2>Список студентов курса</h2>
+<ul id="students_list">
+    {% for item in context['course_detail'] %}
+        <li>{{ item.name }}</li>
+    {% endfor %}
+</ul>
 {% endblock %}
