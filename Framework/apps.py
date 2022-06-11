@@ -13,7 +13,7 @@ class Observer(metaclass=abc.ABCMeta):
 class Subject:
     def __init__(self):
         self._observers = set()
-        self._subject_state = self
+        self._subject_state = None
 
     def attach(self, observer):
         observer.subject = self
@@ -25,7 +25,7 @@ class Subject:
 
     def _notify(self):
         for observer in self._observers:
-            observer.update(self)
+            observer.update(self._subject_state)
 
 
 class SMSNotifier(Observer):
