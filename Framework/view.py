@@ -1,5 +1,7 @@
 from jinja2 import Environment, FileSystemLoader
 
+from Framework.exceptions import Http405Error
+
 
 class View:
     def __call__(self, request):
@@ -7,7 +9,7 @@ class View:
         if self.is_allowed(http_method):
             return getattr(self, http_method)(request)
         else:
-            print('Выкинуть ошибку')
+            raise Http405Error(self)
 
     def is_allowed(self, method):
         if hasattr(self, method):

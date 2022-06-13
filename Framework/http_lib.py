@@ -2,6 +2,9 @@ import abc
 from urllib.parse import parse_qs, urlparse
 
 
+HTTP_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'CONNECT', 'OPTIONS', 'TRACE']
+
+
 class Request(abc.ABC):
 
     @property
