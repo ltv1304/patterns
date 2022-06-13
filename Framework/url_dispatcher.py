@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any
 
+from Framework.exceptions import Http404Error
 from Framework.view import View
 
 
@@ -85,7 +86,7 @@ class UrlTree:
             url = url[:-1:]
         controller = self.root.is_handler(url)
         if controller is None:
-            print('Path error')
+            raise Http404Error
         else:
             return controller
 

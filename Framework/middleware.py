@@ -1,6 +1,7 @@
 import datetime
 
-from Framework.http_lib import HttpResponse
+from Framework.exceptions import Http405Error, Http404Error
+from Framework.http_lib import HttpResponse, HTTP_METHODS
 from urllib.parse import urlparse
 
 
@@ -71,7 +72,9 @@ def middleware(AGENT_CLASS, *args):
             agent = AGENT_CLASS(function, *args)
             result = agent(*func_args)
             return result
+
         return wrapper
+
     return decorator
 
 
@@ -83,8 +86,38 @@ def debug(logger_name):
                 self._obj = cls(*args, **kwargs)
 
             def __call__(self, request):
-                print(f'From {self.name} logger: {datetime.datetime.now()} called method {request.method} of class {type(self._obj).__name__}')
+                print(
+                    f'From {self.name} logger: {datetime.datetime.now()} called method {request.method} of class {type(self._obj).__name__}')
                 return self._obj.__call__(request)
 
         return Logger
+
     return decorator
+
+
+# ############ Protection from blind faith #####################
+class ServerErrorHandler:
+    def __init__(self, get_response):
+        self._get_response = get_response
+
+    def __call__(self, request):
+        try:
+            result = self._get_response(request)
+        except Http405Error as err:
+            view_class = err.args[0]
+            view_methods_list = [attribute.upper() for attribute in dir(view_class)
+                                 if callable(getattr(view_class, attribute))
+                                 and attribute.startswith('__') is False]
+            allowed_methods = [item for item in set(view_methods_list) & set(HTTP_METHODS)]
+            result = HttpResponse(''.encode("utf-8"), request, {'Allow': ', '.join(allowed_methods)})
+            result.response_status = '405 Method Not Allowed\n'
+
+        except Http404Error:
+            result = HttpResponse(''.encode("utf-8"), request)
+            result.response_status = '404 Not Found\n'
+
+        except Exception:
+            result = HttpResponse(''.encode("utf-8"), request)
+            result.response_status = '500 Internal Server Error\n'
+
+        return result
