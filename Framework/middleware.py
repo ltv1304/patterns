@@ -1,7 +1,7 @@
 import datetime
 
 from Framework.exceptions import Http405Error, Http404Error
-from Framework.http_lib import HttpResponse, HTTP_METHODS
+from Framework.http_lib import HTTP_METHODS, HttpResponse
 from urllib.parse import urlparse
 
 
@@ -17,8 +17,7 @@ class CORS:
             else:
                 return HttpResponse('', request)
         else:
-            response = self._get_response(request)
-        return response
+            return self._get_response(request)
 
     def get_cors_response(self, request):
         if request.method == 'OPTIONS':
@@ -32,6 +31,7 @@ class CORS:
         else:
             response = self._get_response(request)
             response.additional_headers = {
+                **response.additional_header,
                 'Access-Control-Allow-Origin': request.headers['Origin'],
                 'Access-Control-Allow-Headers': '*',
             }
@@ -109,15 +109,12 @@ class ServerErrorHandler:
                                  if callable(getattr(view_class, attribute))
                                  and attribute.startswith('__') is False]
             allowed_methods = [item for item in set(view_methods_list) & set(HTTP_METHODS)]
-            result = HttpResponse(''.encode("utf-8"), request, {'Allow': ', '.join(allowed_methods)})
-            result.response_status = '405 Method Not Allowed\n'
+            result = HttpResponse(''.encode("utf-8"), request, {'Allow': ', '.join(allowed_methods)}, response_status='405 Method Not Allowed\n')
 
         except Http404Error:
-            result = HttpResponse(''.encode("utf-8"), request)
-            result.response_status = '404 Not Found\n'
+            result = HttpResponse(''.encode("utf-8"), request, response_status='404 Not Found\n')
 
         except Exception:
-            result = HttpResponse(''.encode("utf-8"), request)
-            result.response_status = '500 Internal Server Error\n'
+            result = HttpResponse(''.encode("utf-8"), request, response_status='500 Internal Server Error\n')
 
         return result

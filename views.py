@@ -43,7 +43,7 @@ class ContactsView(View):
             print(f'Получено сообщение от пользователя: {message_dict["name"]}(e-mail: {message_dict["mail"]})')
             print(f'Текс сообщения:')
             print(message_dict["message"])
-        return HttpResponseRedirect('', request)
+        return HttpResponseRedirect(response_body=''.encode("utf-8"), request=request)
 
 
 class SuccessView(View):
@@ -69,11 +69,11 @@ class CourseView(View):
     def post(self, request):
         if request.query.get('pk'):
             pk = int(request.query['pk'][0])
-            course_serializer.update(request.data, pk)
-            return HttpResponseRedirect('', request)
+            course_serializer.save(request.data, pk)
+            return HttpResponseRedirect(response_body=''.encode("utf-8"), request=request)
         else:
-            course_serializer.insert(request.data)
-            return HttpResponseRedirect('', request)
+            course_serializer.save(request.data)
+            return HttpResponseRedirect(response_body=''.encode("utf-8"), request=request)
 
 
 class CategoryView(View):
@@ -85,8 +85,9 @@ class CategoryView(View):
 
     def post(self, request: Request):
         if request.data_len:
-            category_serializer.insert(request.data)
-            return HttpResponseRedirect('', request)
+            cat_instance = category_serializer.save(request.data, commit=False)
+            category_serializer.save(cat_instance)
+            return HttpResponseRedirect(response_body=''.encode("utf-8"), request=request)
 
 
 @debug('test1')
@@ -105,8 +106,8 @@ class StudentsView(View):
     def post(self, request: Request):
         if request.query.get('pk'):
             pk = int(request.query['pk'][0])
-            student_serializer.update(request.data, pk)
-            return HttpResponseRedirect('', request)
+            student_serializer.save(request.data, pk)
+            return HttpResponseRedirect(response_body=''.encode("utf-8"), request=request)
         else:
-            student_serializer.insert(request.data)
-            return HttpResponseRedirect('', request)
+            student_serializer.save(request.data)
+            return HttpResponseRedirect(response_body=''.encode("utf-8"), request=request)

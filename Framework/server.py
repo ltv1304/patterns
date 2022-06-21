@@ -1,7 +1,7 @@
 import socket
 from select import select
 
-from Framework.http_lib import RequestTestServer
+from Framework.http_lib import RequestTestServer, get_request_obj
 from web_app import app
 
 
@@ -38,7 +38,7 @@ class TestServer:
     def handle_connection(self, client_socket):
         bytes = client_socket.recv(4096)
         if bytes:
-            request = RequestTestServer(bytes)
+            request = get_request_obj(bytes)
             http_responce = app(request)
 
             client_socket.send(f'{http_responce.response_proto} {http_responce.response_status}'.encode())

@@ -17,6 +17,7 @@ class AbstractSerializer(ABC, Subject):
         self.fields = fields
         self.fields_str = ', '.join(self.fields)
         self.class_fields = ('id',) + fields
+        self.class_instance = None
 
     ############# ФАБРИЧНЫЙ МЕТОД #############################
     @property
@@ -26,6 +27,60 @@ class AbstractSerializer(ABC, Subject):
     @abstractmethod
     def data_cook(self, data: str):
         return data
+
+    def save(self, data=None, pk=None, commit=True):
+        if type(data) == type(self.class_instance):
+            data_dict = {key: val for key, val in zip(self.class_fields, [getattr(data, x) for x in self.class_fields])}
+            pk = data.id
+            if self.pk_exist(pk):
+                self.update(data_dict, pk)
+            else:
+                self.insert(data_dict)
+            self.end_transaction()
+            return data
+        else:
+            data_dict = self.data_cook(data)
+            if type(data_dict) == str:
+                raise NotImplementedError(
+                    f"Model property function don't declared in serializer {self.__class__.__name__}")
+
+            statement = f"BEGIN;"
+            self.cursor.execute(statement)
+
+        if pk:
+            self.update(data_dict, pk)
+        else:
+            pk = self.insert(data_dict)
+
+        self.class_instance = self.find_by_id(pk)
+
+        if not commit:
+            statement = f"ROLLBACK;"
+            self.cursor.execute(statement)
+        else:
+            self.end_transaction()
+
+        self.class_instance = self.class_instance
+
+        return self.class_instance
+
+    def pk_exist(self, pk):
+        statement = f'SELECT EXISTS(SELECT id FROM {self.table} WHERE id = ?)'
+        self.cursor.execute(statement, (str(pk), ))
+        result = self.cursor.fetchone()[0]
+        return bool(result)
+
+    def get_last_id(self):
+        statement = f'SELECT MAX(id) FROM {self.table};'
+        self.cursor.execute(statement)
+        result = self.cursor.fetchone()[0]
+        return int(result)
+
+    def end_transaction(self):
+        try:
+            self.connection.commit()
+        except DbException as e:
+            raise DbCommitException(e.args)
 
     def find_by_id(self, pk: int):
         statement = f"SELECT * FROM {self.table} WHERE id=?;"
@@ -37,7 +92,7 @@ class AbstractSerializer(ABC, Subject):
         else:
             raise RecordNotFoundException(f'record with id={pk} not found')
 
-    def get_all(self):
+    def get_all(self) -> list:
         statement = f"SELECT * FROM {self.table};"
         self.cursor.execute(statement)
         result = self.cursor.fetchall()
@@ -46,33 +101,25 @@ class AbstractSerializer(ABC, Subject):
         else:
             raise DbTableIsEmpty(f'No records in table {self.table}')
 
-    def insert(self, data: str):
-        data = self.data_cook(data)
+    def insert(self, data: dict) -> int:
         pattern = ', '.join(['?' for _ in self.fields])
         statement = f"INSERT INTO {self.table} ({self.fields_str}) VALUES ({pattern});"
         self.cursor.execute(statement, tuple([data[key] for key in self.fields]))
+        return self.get_last_id()
 
-        try:
-            self.connection.commit()
-        except DbException as e:
-            raise DbCommitException(e.args)
-
-    def update(self, data: str, pk: int):
-        data = self.data_cook(data)
+    def update(self, data: str, pk: int) -> int:
         statement = f'UPDATE {self.table} SET {", ".join([x + "=?" for x in self.fields])} WHERE id=?;'
         self.cursor.execute(statement, tuple([data[key] for key in self.fields]) + (pk,))
-        try:
-            self.connection.commit()
-        except DbException as e:
-            raise DbUpdateException(e.args)
+        return pk
 
-    def delete(self, pk: int):
+    def delete(self, pk: int) -> int:
         statement = f"DELETE FROM {self.table} WHERE id=?;"
         self.cursor.execute(statement, (pk,))
         try:
             self.connection.commit()
         except DbException as e:
             raise DbDeleteException(e.args)
+        return pk
 
     @staticmethod
     def get_data(data: str):
