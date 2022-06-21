@@ -8,3 +8,4 @@ class DbTableIsEmpty(DbException): pass
 
 class Http405Error(Exception): pass
 class Http404Error(Exception): pass
+class Http500Error(Exception): pass

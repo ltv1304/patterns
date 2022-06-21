@@ -1,8 +1,18 @@
 import abc
 from urllib.parse import parse_qs, urlparse
 
+from Framework.exceptions import Http500Error
 
 HTTP_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'CONNECT', 'OPTIONS', 'TRACE']
+
+
+def get_request_obj(data):
+    if type(data) == dict:
+        return RequestWSGIServer(data)
+    elif type(data) == bytes:
+        return RequestTestServer(data)
+    else:
+        assert Http500Error
 
 
 class Request(abc.ABC):
@@ -37,6 +47,10 @@ class Request(abc.ABC):
     def data_len(self):
         pass
 
+    @property
+    @abc.abstractmethod
+    def proto(self):
+        pass
 
 class RequestWSGIServer(Request):
     def __init__(self, environ: dict):
@@ -81,6 +95,11 @@ class RequestWSGIServer(Request):
             data = self.environ['wsgi.input'].read(self.data_len) if self.data_len > 0 else b''
             return data.decode(encoding='utf-8')
 
+    @property
+    def proto(self):
+        proto = self.environ.get('SERVER_PROTOCOL') or 'HTTP/1.1'
+        return proto
+
 
 class RequestTestServer(Request):
     def __init__(self, request: bytearray):
@@ -92,7 +111,7 @@ class RequestTestServer(Request):
         request_headline = request_head[0]
         request_rest = {key: val for key, val in [item.split(': ') for item in request_head[1:]]}
         self._headers = dict(x.split(': ', 1) for x in request_head[1:])
-        self._method, self.uri, self.proto = request_headline.split(' ', 3)
+        self._method, self.uri, self._proto = request_headline.split(' ', 3)
         self._data_len = int(request_rest.get('Content-Length')) if request_rest.get('Content-Length') else 0
 
     @property
@@ -123,19 +142,22 @@ class RequestTestServer(Request):
     def data_len(self):
         return self._data_len
 
+    @property
+    def proto(self):
+        return self._proto
 
-class HttpResponse:
-    def __init__(self, responce_body, request, additional_headers={}):
+
+class HttpResponseBase(abc.ABC):
+    def __init__(self, response_body, request, additional_headers={}):
+        self.body = response_body
         self.request = request
-        self.body = responce_body
+        self.additional_headers = additional_headers
         self.headers_raw = {
             'Content-Type': 'text/html; encoding=utf8',
             'Content-Length': str(len(self.body)),
             'Connection': 'close',
         }
-        self.additional_headers = additional_headers
-        self.response_proto = 'HTTP/1.1'
-        self.response_status = '200 OK\n'
+        self.response_proto = self.request.proto
 
     @property
     def headers(self):
@@ -143,17 +165,15 @@ class HttpResponse:
         return ''.join(['{}: {}\n'.format(k, v) for k, v in headers_full.items()])
 
 
-class HttpResponseRedirect:
-    def __init__(self, response_body, request):
-        self.request = request
-        self.body = response_body.encode("utf-8")
-        self.headers_raw = {
-            'Content-Type': 'text/html; encoding=utf8',
-            'Content-Length': str(len(self.body)),
-            'Connection': 'close',
-            'Location': '/success'
-        }
-        self.headers = ''.join(['{}: {}\n'.format(k, v) for k, v in self.headers_raw.items()])
-        self.response_proto = 'HTTP/1.1'
+class HttpResponse(HttpResponseBase):
+    def __init__(self, *args, response_status='200 OK\n', **kwargs):
+        super(HttpResponse, self).__init__(*args, **kwargs)
+        self.response_status = response_status
+
+
+class HttpResponseRedirect(HttpResponseBase):
+    def __init__(self, redirect_url='/', *args, **kwargs):
+        super(HttpResponseRedirect, self).__init__(*args, **kwargs)
+        self.additional_headers['Location'] = redirect_url
         self.response_status = '303 See Other\n'
 

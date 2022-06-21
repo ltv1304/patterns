@@ -1,7 +1,7 @@
 import sqlite3
 
 from Framework.apps import Subject, EmailNotifier, SMSNotifier
-from Framework.exceptions import DbException, DbUpdateException
+from Framework.exceptions import DbException, DbUpdateException, Http500Error
 from Framework.serializers import AbstractSerializer
 
 
@@ -41,7 +41,7 @@ class CourseBaseSerializer(AbstractSerializer):
         return data_dict
 
 
-class CourseSerializer(AbstractSerializer, Subject):
+class CourseSerializer(AbstractSerializer):
     def __init__(self, *args):
         super().__init__(*args)
         self.many2many_table = 'course_student'
@@ -100,7 +100,7 @@ class CourseSerializer(AbstractSerializer, Subject):
         data_dict = self.get_data(data)
         data_dict['name'] = data_dict['name'].rstrip()
         data_dict['detail'] = data_dict['detail'].rstrip()
-        data_dict['detail'] = int(data_dict['detail'])
+        data_dict['category'] = int(data_dict['category'])
         return data_dict
 
     def update(self, *args):
@@ -156,7 +156,6 @@ class StudentSerializer(AbstractSerializer):
         return _Class
 
     def update(self, data: str, pk: int):
-        course_id_list = self.course_data_cook(data)
         statement = f"SELECT * FROM {self.many2many_table} WHERE student_id=?;"
         self.cursor.execute(statement, (pk,))
         query = self.cursor.fetchall()
@@ -165,7 +164,7 @@ class StudentSerializer(AbstractSerializer):
             self.cursor.execute(statement, (pk,))
 
         statement = f"INSERT INTO {self.many2many_table} (course_id, student_id) VALUES (?, ?);"
-        for course_id in course_id_list:
+        for course_id in data:
             self.cursor.execute(statement, (course_id, pk))
         try:
             self.connection.commit()
@@ -197,7 +196,18 @@ class StudentSerializer(AbstractSerializer):
                                             self.related_field)
         return student
 
+    # Плохая реализация цепочки ответственности
     def data_cook(self, data: str):
+        try:
+            result = self.student_data_cook(data)
+        except Exception:
+            try:
+                result = self.course_data_cook(data)
+            except Exception:
+                raise Http500Error
+        return result
+
+    def student_data_cook(self, data: str):
         data_dict = self.get_data(data)
         data_dict['name'] = data_dict['name'].rstrip()
         return data_dict
